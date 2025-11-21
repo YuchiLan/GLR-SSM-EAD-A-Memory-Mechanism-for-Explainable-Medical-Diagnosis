@@ -426,7 +426,7 @@ Issue: BERT tokenizer download fails
 Solution: Pre-download with python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('bert-base-uncased')"
 See docs/TROUBLESHOOTING.md for comprehensive troubleshooting guide.
 
-📝 Citation
+#  Citation
 If you use this code in your research, please cite:
 bibtex@mastersthesis{caleb2025glr,
   title={Explainable Hybrid Architectures for Medical Diagnosis: A Hymba-Inspired State Space Framework with Evidence-Adaptive Memory},
