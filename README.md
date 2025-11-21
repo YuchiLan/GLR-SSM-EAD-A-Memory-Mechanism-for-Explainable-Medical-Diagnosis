@@ -43,45 +43,6 @@ Deletion AUC < 0.01 (faithful)
 Groundedness > 0.60 (traceable)
 Jaccard > 0.84 (stable)
 
-
-
-
-📁 Repository Structure
-GLR-SSM-EAD-Archive/
-│
-├── README.md                           # This file
-├── REPRODUCIBILITY_REPORT.md           # Detailed reproduction instructions
-├── CODE_DOCUMENTATION.md               # In-depth code documentation
-├── requirements.txt                    # Python dependencies
-│
-├── src/                                # Source code
-│   ├── mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics_v1.py
-│   └── __init__.py
-│
-├── scripts/                            # Utility scripts
-│   ├── extract_glr_ssm_results.py     # Results extraction
-│   ├── plot_training_curves.py         # Visualization
-│   └── verify_installation.py          # Environment verification
-│
-├── data/                               # Dataset directory (empty - add your data here)
-│   └── README.md                       # Dataset format instructions
-│
-├── models/                             # Saved models directory
-│   └── .gitkeep
-│
-├── results/                            # Results output directory
-│   └── .gitkeep
-│
-├── docs/                               # Additional documentation
-│   ├── ARCHITECTURE.md                 # Architecture details
-│   ├── EXPERIMENTS.md                  # Experimental setup
-│   └── TROUBLESHOOTING.md              # Common issues and solutions
-│
-└── tests/                              # Unit tests
-    ├── test_glr_ssm_memory.py
-    ├── test_data_loading.py
-    └── test_explanation_metrics.py
-
 🔧 Installation
 Prerequisites
 
