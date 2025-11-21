@@ -371,18 +371,18 @@ optimizer = AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
 criterion = CrossEntropyLoss(weight=class_weights)
 
 # Class balancing
-# Positive class oversampled to match negative class size
+Positive class oversampled to match negative class size
 
 # Gradient clipping
 clip_grad_norm_(model.parameters(), 1.0)
 
-📊 Output Files
+# Output Files
 Training Outputs
 FileDescriptionLocationbest_lung_cls_glr_ssm_ead_cpu.pthTrained model weightsmodels/training_log.txtComplete execution logresults/
 Results Outputs (from extraction script)
 FileDescriptionContentglr_ssm_results.jsonStructured resultsAll metrics in JSON formattable1_classification_performance.csvClassification metricsPrecision, recall, F1 per classtable2_detailed_metrics.csvDetailed performanceROC-AUC, confusion matrix, etc.table3_explanation_metrics.csvExplanation qualityFaithfulness, plausibility, stabilitytable4_training_progress.csvTraining historyLoss and accuracy per epochresults_summary.mdSummary reportMarkdown format summary
 
-🧪 Testing
+# Testing
 Run Unit Tests
 bashcd tests
 python -m pytest test_glr_ssm_memory.py -v
@@ -408,13 +408,13 @@ assert alpha.shape == (2, 100, 3), "Evidence shape mismatch"
 assert alpha.min() >= 0 and alpha.max() <= 1, "Evidence scores out of range"
 print("✓ Evidence head test passed")
 
-📈 Performance Benchmarks
+# Performance Benchmarks
 Training Performance
 ConfigurationTime (min)AccuracyROC-AUCRAM (GB)Default (4 layers, d=256)75-9097.8%0.9923.5Small (3 layers, d=192)45-6096.5%0.9852.5Large (6 layers, d=384)120-15098.5%0.9955.5
 Inference Performance
 Batch SizeTime per SampleThroughput10.85 sec1.18 samples/sec160.12 sec8.33 samples/sec320.08 sec12.5 samples/sec
 
-🔍 Troubleshooting
+# Troubleshooting
 Common Issues
 Issue: Out of memory during training
 Solution: Reduce BATCH_SIZE to 8 or 4, or reduce MAX_LEN to 256
