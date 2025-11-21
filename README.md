@@ -76,9 +76,9 @@ cp your_dataset.csv data/cases_lung_cancer_filtered.csv
 
 # Run training
 cd src
-python mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics.py
+python GLR_SSM_EAD_with_explanation_metrics.py
 Training with Logging
-bashpython mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics.py > ../results/training_log.txt 2>&1
+bashpython GLR_SSM_EAD_with_explanation_metrics.py > ../results/training_log.txt 2>&1
 Extract Results
 bashcd scripts
 python extract_glr_ssm_results.py ../results/training_log.txt
@@ -209,7 +209,7 @@ Readability: readability_proxy()
 
 📚 Usage Examples
 Example 1: Training from Scratch
-pythonfrom src.mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics import *
+pythonfrom src.GLR_SSM_EAD_with_explanation_metrics import *
 
 # Load data
 df = load_csv("data/cases_lung_cancer_filtered.csv")
@@ -235,7 +235,7 @@ evaluate(model, tokenizer, df_val)
 Example 2: Load Trained Model and Predict
 pythonimport torch
 from transformers import AutoTokenizer
-from src.mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics import *
+from src.GLR_SSM_EAD_with_explanation_metrics import *
 
 # Load model
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
@@ -254,7 +254,7 @@ print(f"Prediction: {answer}")
 print(f"Probability: {prob:.2%}")
 print(f"Explanation: {rationale}")
 Example 3: Compute Explanation Metrics
-pythonfrom src.mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics import *
+pythonfrom src.GLR_SSM_EAD_with_explanation_metrics import *
 
 # Get salient tokens
 tokens, indices, encoding = salient_tokens(model, tokenizer, text, top_k=25)
@@ -294,7 +294,7 @@ memory = GLR_SSM_EAD_Memory(d=384, rank=32, p_drop=0.05)
 
 ⚙️ Configuration
 Global Hyperparameters
-File: src/mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics.py
+File: src/GLR_SSM_EAD_with_explanation_metrics.py
 Lines: 30-39
 pythonPATIENCE   = 3      # Early stopping patience (epochs)
 THRESHOLD  = 0.5    # Classification threshold
@@ -353,7 +353,7 @@ Test Coverage
 bashpython -m pytest --cov=src tests/
 Manual Testing
 python# Test GLR-SSM-EAD memory
-from src.mini_Hymba_Medical_GLR_SSM_EAD_with_explanation_metrics import GLR_SSM_EAD_Memory
+from src.GLR_SSM_EAD_with_explanation_metrics import GLR_SSM_EAD_Memory
 import torch
 
 mem = GLR_SSM_EAD_Memory(d=256, rank=16)
