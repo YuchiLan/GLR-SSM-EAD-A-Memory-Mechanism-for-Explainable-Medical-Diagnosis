@@ -1,4 +1,4 @@
-# GLR-SSM-EAD-A-Memory-Mechanism-for-Explainable-Medical-Diagnosis
+# GLR-SSM-EAD: A Memory Mechanism for Explainable Medical Diagnosis
 
 📋 Table of Contents
 
