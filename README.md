@@ -30,19 +30,6 @@ Adaptive temporal dynamics based on evidence type
 CPU-efficient training and inference
 Comprehensive explainability metrics
 
-Performance Highlights
-
-Accuracy: 97-98% on lung cancer classification
-ROC-AUC: 0.99+
-False Negative Rate: 2-3% (critical for cancer screening)
-Model Size: ~11M parameters
-Training Time: 60-90 minutes on CPU
-Explanation Quality:
-
-Deletion AUC < 0.01 (faithful)
-Groundedness > 0.60 (traceable)
-Jaccard > 0.84 (stable)
-
 🔧 Installation
 Prerequisites
 
