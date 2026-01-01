@@ -19,10 +19,26 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+# ============================================================================
+# CPU OPTIMIZATIONS
+# ============================================================================
+
+# Enable multi-threading for CPU
+torch.set_num_threads(os.cpu_count())
+
+# Enable MKL-DNN optimizations if available
+if hasattr(torch.backends, 'mkldnn'):
+    torch.backends.mkldnn.enabled = True
+
+# Disable debug features for speed
+torch.autograd.set_detect_anomaly(False)
+torch.autograd.profiler.profile(False)
+torch.autograd.profiler.emit_nvtx(False)
 
 # ============================================================================
 # CONFIGURATION
@@ -340,8 +356,8 @@ class HybridHymbaBlockCPU(nn.Module):
         z = z.transpose(1, 2).contiguous().view(B, T, D)
         h_attn = self.o(z)
 
-        # Memory mechanism
-        h_mem = self.mem(h_attn)
+        # Memory mechanism (parallel branch - both process same input h)
+        h_mem = self.mem(h)
         x = x + self.mix(h_attn + h_mem)
         
         # MLP
@@ -1167,26 +1183,14 @@ def train(model, tokenizer, df_tr, df_val, epochs=20, bsz=BATCH_SIZE, lr=LR, pat
     tr_ds = LungCancerDataset(df_tr, tokenizer)
     val_ds = LungCancerDataset(df_val, tokenizer)
     
-    # Class-balanced sampling
-    counts = df_tr["has_lung_cancer"].value_counts().sort_index()
-    sample_w = torch.tensor([
-        1/max(counts.get(0, 1), 1),
-        1/max(counts.get(1, 1), 1)
-    ])[df_tr["has_lung_cancer"].to_numpy()]
-    
-    tr_dl = DataLoader(
-        tr_ds,
-        batch_size=bsz,
-        sampler=WeightedRandomSampler(sample_w, len(df_tr))
-    )
-    val_dl = DataLoader(val_ds, batch_size=bsz)
+    # Simple DataLoader with shuffle (data already balanced via oversampling)
+    # Using num_workers for parallel data loading
+    num_workers = min(4, os.cpu_count() or 1)
+    tr_dl = DataLoader(tr_ds, batch_size=bsz, shuffle=True, num_workers=num_workers, pin_memory=False)
+    val_dl = DataLoader(val_ds, batch_size=bsz, num_workers=num_workers, pin_memory=False)
 
-    # Class-weighted loss
-    class_w = torch.tensor([
-        max(1.0, counts.get(1, 1)),
-        max(1.0, counts.get(0, 1))
-    ], dtype=torch.float)
-    crit = nn.CrossEntropyLoss(weight=class_w)
+    # Standard cross-entropy loss (no class weighting needed - data is balanced)
+    crit = nn.CrossEntropyLoss()
     
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     
@@ -1220,7 +1224,7 @@ def train(model, tokenizer, df_tr, df_val, epochs=20, bsz=BATCH_SIZE, lr=LR, pat
         correct = 0
         total = 0
         
-        with torch.no_grad():
+        with torch.inference_mode():
             for b in val_dl:
                 ids = b["input_ids"].to(device)
                 m = b["attention_mask"].to(device)
@@ -1261,7 +1265,7 @@ def evaluate(model, tokenizer, df_val, threshold=THRESHOLD):
     y_prob = []
     
     model.eval()
-    with torch.no_grad():
+    with torch.inference_mode():
         for b in dl:
             ids = b["input_ids"].to(device)
             msk = b["attention_mask"].to(device)
@@ -1304,7 +1308,7 @@ def predict(model, tokenizer, reasoner, text, k=25, threshold=THRESHOLD):
     ids = enc["input_ids"].to(device)
     msk = enc["attention_mask"].to(device)
     
-    with torch.no_grad():
+    with torch.inference_mode():
         out = model(ids, msk)
         prob = torch.softmax(out, 1)[0, 1].item()
     
@@ -1358,6 +1362,10 @@ def main():
     log.info("=" * 70)
     log.info("GLR-SSM-EAD: Explainable Lung Cancer Detection")
     log.info("=" * 70)
+    log.info(f"CPU Optimizations:")
+    log.info(f"  • Threads: {torch.get_num_threads()}")
+    log.info(f"  • MKL-DNN: {torch.backends.mkldnn.is_available()}")
+    log.info(f"  • torch.compile: {hasattr(torch, 'compile')}")
     log.info(f"Configuration:")
     log.info(f"  • Hidden dimension: {MODEL_DIM}")
     log.info(f"  • Layers: {NUM_LAYERS}")
@@ -1376,13 +1384,27 @@ def main():
     df = load_csv(csv_path)
     df["input_text"] = df.apply(build_input, axis=1)
 
-    # Balance dataset
+    # Balance dataset via oversampling
     pos = df[df.has_lung_cancer == 1]
     neg = df[df.has_lung_cancer == 0]
+    
+    log.info(f"\nClass Distribution (Before Oversampling):")
+    log.info(f"  • Positive (lung cancer): {len(pos)}")
+    log.info(f"  • Negative (no cancer):   {len(neg)}")
+    log.info(f"  • Imbalance ratio: 1:{len(neg)//max(1,len(pos))}")
+    
     df = pd.concat([
         neg,
         pos.sample(len(neg), replace=True, random_state=SEED)
     ]).sample(frac=1, random_state=SEED).reset_index(drop=True)
+    
+    pos_after = df[df.has_lung_cancer == 1]
+    neg_after = df[df.has_lung_cancer == 0]
+    
+    log.info(f"\nClass Distribution (After Oversampling):")
+    log.info(f"  • Positive (lung cancer): {len(pos_after)}")
+    log.info(f"  • Negative (no cancer):   {len(neg_after)}")
+    log.info(f"  • Total samples: {len(df)}")
 
     # Train/val split
     df_tr, df_val = train_test_split(
@@ -1393,10 +1415,19 @@ def main():
     )
 
     # Initialize model
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", use_fast=True)
     tokenizer.pad_token = tokenizer.pad_token or tokenizer.unk_token
 
     model = MiniHymbaCPUEncoder(tokenizer.vocab_size).to(device)
+    
+    # Compile model for faster execution (PyTorch 2.0+)
+    if hasattr(torch, 'compile'):
+        try:
+            model = torch.compile(model)
+            log.info("Model compiled with torch.compile() for faster execution")
+        except Exception as e:
+            log.warning(f"torch.compile() not available: {e}")
+    
     reasoner = ReasonerV4(tokenizer)
 
     param_count = sum(p.numel() for p in model.parameters())
@@ -1474,7 +1505,7 @@ def main():
         ids = enc["input_ids"].to(device)
         msk = enc["attention_mask"].to(device)
         
-        with torch.no_grad():
+        with torch.inference_mode():
             prob = torch.softmax(model(ids, msk), 1)[0, 1].item()
 
         rat, buckets = reasoner.explain(
