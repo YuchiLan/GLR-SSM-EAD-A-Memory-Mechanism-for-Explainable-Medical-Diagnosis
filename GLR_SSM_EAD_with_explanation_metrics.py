@@ -25,22 +25,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 
 # ============================================================================
-# CPU OPTIMIZATIONS
-# ============================================================================
-
-# Enable multi-threading for CPU
-torch.set_num_threads(os.cpu_count())
-
-# Enable MKL-DNN optimizations if available
-if hasattr(torch.backends, 'mkldnn'):
-    torch.backends.mkldnn.enabled = True
-
-# Disable debug features for speed
-torch.autograd.set_detect_anomaly(False)
-torch.autograd.profiler.profile(False)
-torch.autograd.profiler.emit_nvtx(False)
-
-# ============================================================================
 # CONFIGURATION
 # ============================================================================
 
@@ -1184,10 +1168,8 @@ def train(model, tokenizer, df_tr, df_val, epochs=20, bsz=BATCH_SIZE, lr=LR, pat
     val_ds = LungCancerDataset(df_val, tokenizer)
     
     # Simple DataLoader with shuffle (data already balanced via oversampling)
-    # Using num_workers for parallel data loading
-    num_workers = min(4, os.cpu_count() or 1)
-    tr_dl = DataLoader(tr_ds, batch_size=bsz, shuffle=True, num_workers=num_workers, pin_memory=False)
-    val_dl = DataLoader(val_ds, batch_size=bsz, num_workers=num_workers, pin_memory=False)
+    tr_dl = DataLoader(tr_ds, batch_size=bsz, shuffle=True)
+    val_dl = DataLoader(val_ds, batch_size=bsz)
 
     # Standard cross-entropy loss (no class weighting needed - data is balanced)
     crit = nn.CrossEntropyLoss()
@@ -1224,7 +1206,7 @@ def train(model, tokenizer, df_tr, df_val, epochs=20, bsz=BATCH_SIZE, lr=LR, pat
         correct = 0
         total = 0
         
-        with torch.inference_mode():
+        with torch.no_grad():
             for b in val_dl:
                 ids = b["input_ids"].to(device)
                 m = b["attention_mask"].to(device)
@@ -1265,7 +1247,7 @@ def evaluate(model, tokenizer, df_val, threshold=THRESHOLD):
     y_prob = []
     
     model.eval()
-    with torch.inference_mode():
+    with torch.no_grad():
         for b in dl:
             ids = b["input_ids"].to(device)
             msk = b["attention_mask"].to(device)
@@ -1308,7 +1290,7 @@ def predict(model, tokenizer, reasoner, text, k=25, threshold=THRESHOLD):
     ids = enc["input_ids"].to(device)
     msk = enc["attention_mask"].to(device)
     
-    with torch.inference_mode():
+    with torch.no_grad():
         out = model(ids, msk)
         prob = torch.softmax(out, 1)[0, 1].item()
     
@@ -1362,10 +1344,6 @@ def main():
     log.info("=" * 70)
     log.info("GLR-SSM-EAD: Explainable Lung Cancer Detection")
     log.info("=" * 70)
-    log.info(f"CPU Optimizations:")
-    log.info(f"  • Threads: {torch.get_num_threads()}")
-    log.info(f"  • MKL-DNN: {torch.backends.mkldnn.is_available()}")
-    log.info(f"  • torch.compile: {hasattr(torch, 'compile')}")
     log.info(f"Configuration:")
     log.info(f"  • Hidden dimension: {MODEL_DIM}")
     log.info(f"  • Layers: {NUM_LAYERS}")
@@ -1415,19 +1393,10 @@ def main():
     )
 
     # Initialize model
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     tokenizer.pad_token = tokenizer.pad_token or tokenizer.unk_token
 
     model = MiniHymbaCPUEncoder(tokenizer.vocab_size).to(device)
-    
-    # Compile model for faster execution (PyTorch 2.0+)
-    if hasattr(torch, 'compile'):
-        try:
-            model = torch.compile(model)
-            log.info("Model compiled with torch.compile() for faster execution")
-        except Exception as e:
-            log.warning(f"torch.compile() not available: {e}")
-    
     reasoner = ReasonerV4(tokenizer)
 
     param_count = sum(p.numel() for p in model.parameters())
@@ -1505,7 +1474,7 @@ def main():
         ids = enc["input_ids"].to(device)
         msk = enc["attention_mask"].to(device)
         
-        with torch.inference_mode():
+        with torch.no_grad():
             prob = torch.softmax(model(ids, msk), 1)[0, 1].item()
 
         rat, buckets = reasoner.explain(
