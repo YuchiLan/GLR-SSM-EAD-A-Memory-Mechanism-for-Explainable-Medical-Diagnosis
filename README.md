@@ -73,7 +73,7 @@ Interactive Prediction
 After training completes, the script enters interactive mode:
 Paste a clinical note (empty line to quit):
 > 65-year-old male with 40-pack-year smoking history presented with persistent cough and hemoptysis. CT chest revealed 3.5 cm spiculated right upper lobe nodule with ground-glass opacity.
-
+> 
 Yes, this patient has lung cancer. [P=96.8%]
 Reason → Strong evidence supports a diagnosis of lung cancer. **Imaging:** pulmonary nodule; spiculated lesion; ground-glass opacity **Symptoms:** persistent cough; hemoptysis **Risk factors:** smoking history; advanced age
 Key evidence: nodule, spiculated, hemoptysis, smoking, cough
