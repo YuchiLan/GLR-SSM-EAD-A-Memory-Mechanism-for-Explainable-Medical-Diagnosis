@@ -52,6 +52,7 @@ bashpython scripts/verify_installation.py
 Expected output:
 ✓ PyTorch 2.1.0+cpu installed
 ✓ Transformers 4.35.0 installed
+✓ Microsoft Visual C++ installed
 ✓ All dependencies satisfied
 ✓ BERT tokenizer downloadable
 ✓ Environment ready for training
@@ -262,18 +263,18 @@ print(f"Explanation Jaccard: {stability['exp_jacc_mean']:.4f}")
 print(f"Prediction Invariance: {stability['pred_invariance']:.4f}")
 Example 4: Custom Configuration
 python# Modify hyperparameters at top of script
-PATIENCE = 5        # Increase early stopping patience
-MAX_LEN = 384       # Reduce sequence length for speed
-BATCH_SIZE = 32     # Increase batch size if RAM allows
-LR = 1e-4           # Lower learning rate
-LORA_RANK = 4       # Reduce LoRA rank for efficiency
+PATIENCE = 3        # Increase early stopping patience
+MAX_LEN = 512       # Reduce sequence length for speed
+BATCH_SIZE = 16     # Increase batch size if RAM allows
+LR = 3e-4           # Lower learning rate
+LORA_RANK = 8       # Reduce LoRA rank for efficiency
 
 # Model with custom dimensions
 model = MiniHymbaCPUEncoder(
     vocab_size=tokenizer.vocab_size,
-    d=384,           # Larger hidden dimension
-    n_layers=6,      # More layers
-    n_heads=12       # More attention heads
+    d=256,           # Larger hidden dimension
+    n_layers=4,      # More layers
+    n_heads=8       # More attention heads
 )
 
 # GLR-SSM-EAD with custom rank
